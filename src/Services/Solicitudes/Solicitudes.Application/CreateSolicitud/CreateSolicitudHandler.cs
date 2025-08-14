@@ -1,6 +1,6 @@
-﻿using System.Data;
-using SharedKernel.Data;
+﻿using SharedKernel.Data;
 using SharedKernel.Results;
+using System.Data;
 
 namespace Solicitudes.Application.CreateSolicitud;
 
@@ -8,36 +8,30 @@ public sealed class CreateSolicitudHandler(IStoredProcExecutor spx) : ICreateSol
 {
 	public async Task<Result<(uint solicitudId, string folio)>> Handle(CreateSolicitudCommand cmd, CancellationToken ct)
 	{
-		static void Add(IDbCommand db, string name, object? value, DbType? type = null, int? size = null,
-						ParameterDirection direction = ParameterDirection.Input)
-		{
-			var p = db.CreateParameter();
-			p.ParameterName = name;
-			p.Direction = direction;
-			if (type.HasValue) p.DbType = type.Value;
-			if (size.HasValue) p.Size = size.Value;
-			p.Value = value ?? DBNull.Value;
-			db.Parameters.Add(p);
-		}
+		// Parámetros de entrada
+		var pPersonaId = spx.CreateParameter("@p_persona_id", cmd.PersonaId, DbType.UInt32);
+		var pEstadoClave = spx.CreateParameter("@p_estado_clave", cmd.Estado.ToString(), DbType.String);
+		var pNumeroOficio = spx.CreateParameter("@p_numero_oficio", cmd.NumeroOficio, DbType.String);
+		pNumeroOficio.Size = 50;
+		var pFechaSol = spx.CreateParameter("@p_fecha_solicitud",
+												cmd.FechaSolicitud.ToDateTime(TimeOnly.MinValue),
+												DbType.DateTime);
+		var pUsuarioId = spx.CreateParameter("@p_usuario_id", cmd.UsuarioId, DbType.UInt32);
 
-		var res = await spx.ExecAsync("sp_crear_solicitud", db =>
-		{
-			db.CommandType = CommandType.StoredProcedure;
+		// Parámetros de salida
+		var pOutId = spx.CreateParameter("@p_solicitud_id", null, DbType.UInt32, ParameterDirection.Output);
+		var pOutFolio = spx.CreateParameter("@p_folio", null, DbType.String, ParameterDirection.Output);
+		pOutFolio.Size = 30; // importante para strings de salida en MySQL
 
-			Add(db, "@p_persona_id", cmd.PersonaId, DbType.UInt32);
-			Add(db, "@p_estado_clave", cmd.Estado.ToString(), DbType.String, 20);
-			Add(db, "@p_numero_oficio", cmd.NumeroOficio, DbType.String, 50);
-			Add(db, "@p_fecha_solicitud", cmd.FechaSolicitud.ToDateTime(TimeOnly.MinValue), DbType.DateTime);
-			Add(db, "@p_usuario_id", cmd.UsuarioId, DbType.UInt32);
+		// Ejecuta SP (misma instancia de parámetros para leer los outputs después)
+		await spx.ExecuteAsync("sp_crear_solicitud",
+			new IDbDataParameter[] { pPersonaId, pEstadoClave, pNumeroOficio, pFechaSol, pUsuarioId, pOutId, pOutFolio },
+			ct);
 
-			// outputs
-			Add(db, "@p_solicitud_id", null, DbType.UInt32, direction: ParameterDirection.Output);
-			Add(db, "@p_folio", null, DbType.String, size: 30, direction: ParameterDirection.Output);
-		}, ct);
+		// Recupera salidas
+		var outId = Convert.ToUInt32(pOutId.Value is DBNull ? 0 : pOutId.Value);
+		var outFolio = Convert.ToString(pOutFolio.Value) ?? string.Empty;
 
-		var outId = Convert.ToUInt32(res.Outputs.GetValueOrDefault("@p_solicitud_id") ?? 0);
-		var outFolio = Convert.ToString(res.Outputs.GetValueOrDefault("@p_folio")) ?? string.Empty;
-
-		return Result<(uint, string)>.Success((outId, outFolio));
+		return Result<(uint solicitudId, string folio)>.Success((outId, outFolio));
 	}
 }

@@ -1,43 +1,53 @@
 ﻿using System.Data;
 using Moq;
-using SharedKernel.Abstractions;
+using SharedKernel.Data;               
 using SharedKernel.Domain.Enums;
-using SharedKernel.Results;
 using Solicitudes.Application.CambiarEstado;
 using Solicitudes.Infrastructure;
-using TestDoubles;
-using Xunit;
 
 public class CambiarEstadoHandlerTests
 {
 	[Fact]
 	public async Task Handler_envia_parametros_correctos_al_SP()
 	{
+		// Arrange
 		var spx = new Mock<IStoredProcExecutor>(MockBehavior.Strict);
-		FakeDbCommand? captured = null;
+		IDbDataParameter[]? capturedParams = null;
 
-		spx.Setup(x => x.ExecAsync(
+		spx.Setup(x => x.ExecuteAsync(
 				It.Is<string>(p => p == StoredProcedures.CambiarEstadoSolicitud),
-				It.IsAny<Action<IDbCommand>>(),
+				It.IsAny<IEnumerable<IDbDataParameter>>(),
 				It.IsAny<CancellationToken>()))
-		   .Callback<string, Action<IDbCommand>, CancellationToken>((_, cfg, __) =>
+		   .Callback<string, IEnumerable<IDbDataParameter>, CancellationToken>((_, pars, __) =>
 		   {
-			   var fake = new FakeDbCommand { CommandType = CommandType.StoredProcedure, CommandText = StoredProcedures.CambiarEstadoSolicitud };
-			   cfg(fake);
-			   captured = fake;
+			   capturedParams = pars.ToArray();
 		   })
-		   .ReturnsAsync(new SpResult(1, new Dictionary<string, object?>()));
+		   // filas afectadas / OK
+		   .ReturnsAsync(1);
 
 		var handler = new CambiarEstadoHandler(spx.Object);
 
-		var res = await handler.Handle(new CambiarEstadoCommand(55, EstadoSolicitud.EnRevision, 7, "Se turna a revisión"), default);
+		// Act
+		var res = await handler.Handle(
+			new CambiarEstadoCommand(55, EstadoSolicitud.EnRevision, 7, "Se turna a revisión"),
+			default);
 
+		// Assert
 		Assert.True(res.IsSuccess);
-		var p = captured!.AsFakeParameters();
-		Assert.Equal((uint)55, p.GetValue<uint>("@p_solicitud_id"));
-		Assert.Equal("EN_REVISION", p.GetValue<string>("@p_estado_clave"));
-		Assert.Equal((uint)7, p.GetValue<uint>("@p_usuario_id"));
-		Assert.Equal("Se turna a revisión", p.GetValue<string>("@p_comentario"));
+		Assert.NotNull(capturedParams);
+
+		IDbDataParameter P(string name) =>
+			capturedParams!.First(p => p.ParameterName == name);
+
+		Assert.Equal((uint)55, Convert.ToUInt32(P("@p_solicitud_id").Value));
+		Assert.Equal("EN_REVISION", Convert.ToString(P("@p_estado_clave").Value));
+		Assert.Equal((uint)7, Convert.ToUInt32(P("@p_usuario_id").Value));
+		Assert.Equal("Se turna a revisión", Convert.ToString(P("@p_comentario").Value));
+
+		Assert.Equal(ParameterDirection.Input, P("@p_solicitud_id").Direction);
+		Assert.Equal(ParameterDirection.Input, P("@p_estado_clave").Direction);
+		Assert.Equal(ParameterDirection.Input, P("@p_usuario_id").Direction);
+		Assert.Equal(ParameterDirection.Input, P("@p_comentario").Direction);
 
 		spx.VerifyAll();
 	}
