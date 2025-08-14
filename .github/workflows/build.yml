@@ -60,14 +60,14 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-- name: Build
-  run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
+      - name: Build
+        run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
 
-- name: Test with coverage
-  run: dotnet test SIAU.Platform.sln --no-build -c Release `
-       /p:CollectCoverage=true `
-       /p:CoverletOutput=TestResults/coverage/ `
-       /p:CoverletOutputFormat=opencover
+      - name: Test with coverage
+        run: dotnet test SIAU.Platform.sln --no-build -c Release `
+        /p:CollectCoverage=true `
+        /p:CoverletOutput=TestResults/coverage/ `
+        /p:CoverletOutputFormat=opencover
 
 
       - name: Sonar End
