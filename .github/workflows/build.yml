@@ -59,24 +59,21 @@ jobs:
       - name: Build
         run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
 
+      # Test + cobertura con exclusiones y UMBRALES 80/70/80
+      # Usamos bash para que los ';' y '*' de ExcludeByFile no rompan el parsing.
       - name: Test with coverage (and thresholds)
-        shell: powershell
+        shell: bash
         run: |
-          $excludeByFile = '**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http'
-          $args = @(
-            'SIAU.Platform.sln',
-            '--no-build','-c','Release',
-            '/p:CollectCoverage=true',
-            '/p:CoverletOutput=TestResults/coverage/',
-            '/p:CoverletOutputFormat=opencover',
-            "/p:ExcludeByFile=$excludeByFile",
-            '/p:Exclude=[xunit.*]*',
-            '/p:ThresholdForLines=80',
-            '/p:ThresholdForBranches=70',
-            '/p:ThresholdForMethods=80',
-            '/p:ThresholdStat=total'
-          )
-          dotnet test @args
+          dotnet test SIAU.Platform.sln --no-build -c Release \
+            /p:CollectCoverage=true \
+            /p:CoverletOutput=TestResults/coverage/ \
+            /p:CoverletOutputFormat=opencover \
+            "/p:ExcludeByFile=**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http" \
+            "/p:Exclude=[xunit.*]*" \
+            /p:ThresholdForLines=80 \
+            /p:ThresholdForBranches=70 \
+            /p:ThresholdForMethods=80 \
+            /p:ThresholdStat=total
 
       - name: Sonar End
         env:
