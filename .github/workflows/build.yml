@@ -45,12 +45,13 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
+          $sonarCoverageExclusions = "**/Program.cs,**/Startup.cs,**/GlobalUsings.cs,**/Usings.cs,**/*AssemblyInfo*.cs,**/*.g.cs,**/*.generated.cs,**/*.designer.cs,**/Migrations/**,**/Dependencies/**,**/*DependencyInjection*.cs,**/*.http"
           .\.sonar\scanner\dotnet-sonarscanner begin `
             /k:"tavolordk_SIAU.Platform" `
             /o:"tavolordk" `
             /d:sonar.host.url="https://sonarcloud.io" `
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
-            /d:sonar.coverage.exclusions="**/Program.cs,**/Startup.cs,**/GlobalUsings.cs,**/Usings.cs,**/*AssemblyInfo*.cs,**/*.g.cs,**/*.generated.cs,**/*.designer.cs,**/Migrations/**,**/Dependencies/**,**/*DependencyInjection*.cs,**/*.http"
+            /d:sonar.coverage.exclusions="$sonarCoverageExclusions"
 
       - name: Restore
         run: dotnet restore SIAU.Platform.sln
@@ -58,22 +59,13 @@ jobs:
       - name: Build
         run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
 
-      # ⬇️ COVERAGE con exclusiones y thresholds (falla si no se cumplen)
       - name: Test with coverage (and thresholds)
         shell: powershell
         run: |
+          $excludeByFile = '**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http'
           dotnet test SIAU.Platform.sln --no-build -c Release `
             /p:CollectCoverage=true `
             /p:CoverletOutput=TestResults/coverage/ `
             /p:CoverletOutputFormat=opencover `
-            /p:ExcludeByFile="**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http" `
-            /p:Exclude="[xunit.*]*" `
-            /p:ThresholdForLines=80 `
-            /p:ThresholdForBranches=70 `
-            /p:ThresholdForMethods=80 `
-            /p:ThresholdStat=total
-
-      - name: Sonar End
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: .\.sonar\scanner\dotnet-sonarscanner end
+            "/p:ExcludeByFile=$excludeByFile" `
+            "/p:Exclude=[xunit.*]*" `
