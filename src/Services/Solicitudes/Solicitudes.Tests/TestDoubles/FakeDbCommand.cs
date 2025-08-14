@@ -13,7 +13,7 @@ public sealed class FakeDbCommand : IDbCommand
 	public string CommandText
 	{
 		get => _commandText;
-		set => _commandText = value ?? throw new ArgumentNullException(nameof(CommandText));
+		set => _commandText = value ?? string.Empty;
 	}
 	public int CommandTimeout { get; set; } = 30;
 	public CommandType CommandType { get; set; } = CommandType.Text;
