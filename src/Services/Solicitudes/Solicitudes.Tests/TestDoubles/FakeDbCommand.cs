@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 
 namespace TestDoubles;
 
@@ -8,8 +9,9 @@ public sealed class FakeDbCommand : IDbCommand
 {
 	private readonly FakeDbParameterCollection _parameters = new();
 
-	// <- string? para alinear con IDbCommand
-	public string? CommandText { get; set; }
+	// <- string (no null) + AllowNull en el setter; valor por defecto = ""
+	public string CommandText { get; [param: AllowNull] set; } = string.Empty;
+
 	public int CommandTimeout { get; set; } = 30;
 	public CommandType CommandType { get; set; } = CommandType.Text;
 
@@ -31,9 +33,7 @@ public sealed class FakeDbCommand : IDbCommand
 	public int AffectedRows { get; set; } = 1;
 	public object? ScalarResult { get; set; }
 
-	// Evento útil para leer outputs después de 'ejecución simulada'
 	public event EventHandler? Disposed;
 
-	// Helpers de prueba
 	public FakeDbParameterCollection AsFakeParameters() => _parameters;
 }

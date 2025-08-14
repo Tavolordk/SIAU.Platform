@@ -1,15 +1,15 @@
 ﻿#nullable enable
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 
 namespace TestDoubles;
 
 public sealed class FakeDbParameter : IDbDataParameter
 {
 	public FakeDbParameter() { }
-
 	public FakeDbParameter(string? name, object? value = null)
 	{
-		ParameterName = name;
+		ParameterName = name ?? string.Empty;
 		Value = value;
 	}
 
@@ -23,8 +23,10 @@ public sealed class FakeDbParameter : IDbDataParameter
 	public ParameterDirection Direction { get; set; } = ParameterDirection.Input;
 	public bool IsNullable => true;
 
-	public string? ParameterName { get; set; }   // <- string?
-	public string? SourceColumn { get; set; }   // <- string?
+	// ==> Mantén string (no anulable) y permite null en el setter
+	public string ParameterName { get; [param: AllowNull] set; } = string.Empty;
+	public string SourceColumn { get; [param: AllowNull] set; } = string.Empty;
+
 	public DataRowVersion SourceVersion { get; set; } = DataRowVersion.Current;
 	public object? Value { get; set; }
 }

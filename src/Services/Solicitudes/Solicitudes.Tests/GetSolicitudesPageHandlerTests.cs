@@ -45,10 +45,10 @@ public class GetSolicitudesPageHandlerTests
 
 		var r = await handler.Handle(new GetSolicitudesPageQuery(1, 10), default);
 		Assert.True(r.IsSuccess);
-		Assert.Equal(2, r.Value.TotalItems);
-		Assert.Equal(1, r.Value.CurrentPage);
-		Assert.Equal(2, r.Value.Items.Count);
-		Assert.Equal("F-001", r.Value.Items[0].Folio);
+		Assert.Equal(2, r.Value?.TotalItems);
+		Assert.Equal(1, r.Value?.CurrentPage);
+		Assert.Equal(2, r.Value?.Items.Count);
+		Assert.Equal("F-001", r.Value?.Items[0].Folio);
 
 		qx.VerifyAll();
 	}
