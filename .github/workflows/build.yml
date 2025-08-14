@@ -50,8 +50,8 @@ jobs:
             /k:"tavolordk_SIAU.Platform" `
             /o:"tavolordk" `
             /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
-            /d:sonar.coverage.exclusions="$sonarCoverageExclusions"
+            "/d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml" `
+            "/d:sonar.coverage.exclusions=$sonarCoverageExclusions"
 
       - name: Restore
         run: dotnet restore SIAU.Platform.sln
@@ -63,9 +63,22 @@ jobs:
         shell: powershell
         run: |
           $excludeByFile = '**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http'
-          dotnet test SIAU.Platform.sln --no-build -c Release `
-            /p:CollectCoverage=true `
-            /p:CoverletOutput=TestResults/coverage/ `
-            /p:CoverletOutputFormat=opencover `
-            "/p:ExcludeByFile=$excludeByFile" `
-            "/p:Exclude=[xunit.*]*" `
+          $args = @(
+            'SIAU.Platform.sln',
+            '--no-build','-c','Release',
+            '/p:CollectCoverage=true',
+            '/p:CoverletOutput=TestResults/coverage/',
+            '/p:CoverletOutputFormat=opencover',
+            "/p:ExcludeByFile=$excludeByFile",
+            '/p:Exclude=[xunit.*]*',
+            '/p:ThresholdForLines=80',
+            '/p:ThresholdForBranches=70',
+            '/p:ThresholdForMethods=80',
+            '/p:ThresholdStat=total'
+          )
+          dotnet test @args
+
+      - name: Sonar End
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: .\.sonar\scanner\dotnet-sonarscanner end
