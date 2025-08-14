@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Solicitudes.Application\Solicitudes.Application.csproj" />
     <ProjectReference Include="..\Solicitudes.Domain\Solicitudes.Domain.csproj" />
+    <ProjectReference Include="..\Solicitudes.Infrastructure\Solicitudes.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\SharedKernel\SharedKernel.csproj" />
   </ItemGroup>
 

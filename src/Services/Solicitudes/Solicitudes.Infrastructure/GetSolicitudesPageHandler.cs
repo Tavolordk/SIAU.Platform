@@ -1,12 +1,10 @@
-﻿using MySql.Data.MySqlClient;
-using SharedKernel.Abstractions;
+﻿using SharedKernel.Abstractions;
 using SharedKernel.Results;
-using System.Data;
 using Solicitudes.Application.GetSolicitudes;
 
 namespace Solicitudes.Infrastructure;
 
-public sealed class GetSolicitudesPageHandler(IConnectionFactory factory) : IGetSolicitudesPageHandler
+public sealed class GetSolicitudesPageHandler(IQueryExecutor qx) : IGetSolicitudesPageHandler
 {
 	public async Task<Result<PageResult<SolicitudListItem>>> Handle(GetSolicitudesPageQuery q, CancellationToken ct)
 	{
@@ -14,49 +12,40 @@ public sealed class GetSolicitudesPageHandler(IConnectionFactory factory) : IGet
 		var size = Math.Clamp(q.PageSize, 1, 100);
 		var offset = (page - 1) * size;
 
-		using var conn = (MySqlConnection)factory.Create();
-		await conn.OpenAsync(ct);
+		var total = await qx.ExecuteCountAsync("SELECT COUNT(1) FROM solicitudes", new Dictionary<string, object?>(), ct);
 
-		int total;
-		using (var countCmd = new MySqlCommand("SELECT COUNT(1) FROM solicitudes", conn))
-		{ total = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct)); }
+		const string Sql = @"
+        SELECT
+          s.id,
+          s.folio,
+          CONCAT(p.nombres,' ',p.primer_apellido,' ',COALESCE(p.segundo_apellido,'')) AS persona_nombre,
+          est.clave AS estado_clave,
+          s.fecha_solicitud,
+          s.numero_oficio,
+          s.created_at
+        FROM solicitudes s
+        JOIN persona p              ON p.id = s.persona_id
+        JOIN cat_estado_solicitudes est ON est.id = s.estado_id
+        ORDER BY s.created_at DESC
+        LIMIT @limit OFFSET @offset";
 
-		var items = new List<SolicitudListItem>();
-		using (var cmd = new MySqlCommand(@"
-            SELECT
-              s.id,
-              s.folio,
-              CONCAT(p.nombres,' ',p.primer_apellido,' ',COALESCE(p.segundo_apellido,'')) AS persona_nombre,
-              est.clave AS estado_clave,
-              s.fecha_solicitud,
-              s.numero_oficio,
-              s.created_at
-            FROM solicitudes s
-            JOIN persona p              ON p.id = s.persona_id
-            JOIN cat_estado_solicitudes est ON est.id = s.estado_id
-            ORDER BY s.created_at DESC
-            LIMIT @limit OFFSET @offset
-        ", conn))
+		var rows = await qx.QueryAsync(Sql, new Dictionary<string, object?>
 		{
-			cmd.Parameters.AddWithValue("@limit", size);
-			cmd.Parameters.AddWithValue("@offset", offset);
-			using var r = await cmd.ExecuteReaderAsync(ct);
-			while (await r.ReadAsync(ct))
-			{
-				items.Add(new SolicitudListItem(
-                    Convert.ToUInt32(r.GetInt32("id")),
-                    r.GetString("folio"),
-					r.GetString("persona_nombre"),
-					r.GetString("estado_clave"),
-					DateOnly.FromDateTime(r.GetDateTime("fecha_solicitud")),
-					r.GetString("numero_oficio"),
-					r.GetDateTime("created_at")
-				));
-			}
-		}
+			["@limit"] = size,
+			["@offset"] = offset
+		}, ct);
 
-		var totalPages = (int)Math.Ceiling(total / (double)size);
+		var items = rows.Select(r => new SolicitudListItem(
+			Convert.ToUInt32(r["id"]!),
+			Convert.ToString(r["folio"])!,
+			Convert.ToString(r["persona_nombre"])!,
+			Convert.ToString(r["estado_clave"])!,
+			DateOnly.FromDateTime(Convert.ToDateTime(r["fecha_solicitud"]!)),
+			Convert.ToString(r["numero_oficio"])!,
+			Convert.ToDateTime(r["created_at"]!)
+		)).ToList();
+
 		return Result<PageResult<SolicitudListItem>>.Success(
-			new PageResult<SolicitudListItem>(page, size, totalPages, total, items));
+			new PageResult<SolicitudListItem>(page, size, (int)Math.Ceiling(total / (double)size), total, items));
 	}
 }
