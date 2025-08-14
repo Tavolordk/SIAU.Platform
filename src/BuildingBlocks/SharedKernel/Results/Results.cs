@@ -1,5 +1,6 @@
 ﻿namespace SharedKernel.Results;
-
+using System.Diagnostics.CodeAnalysis;
+[ExcludeFromCodeCoverage]
 public readonly struct Result<T>
 {
 	public bool IsSuccess { get; }

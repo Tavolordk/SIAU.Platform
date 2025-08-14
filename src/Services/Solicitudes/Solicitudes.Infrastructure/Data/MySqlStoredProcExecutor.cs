@@ -1,13 +1,12 @@
 ﻿#nullable enable
 using System.Data;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using MySqlConnector;
 using SharedKernel.Data; // <-- mismo namespace de la interfaz
 
 namespace Solicitudes.Infrastructure.Data
 {
+	[ExcludeFromCodeCoverage]
 	public sealed class MySqlStoredProcExecutor : IStoredProcExecutor
 	{
 		private readonly string _connString;

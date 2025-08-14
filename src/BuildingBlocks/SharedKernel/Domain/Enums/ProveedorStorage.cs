@@ -1,5 +1,6 @@
 ﻿namespace SharedKernel.Domain.Enums;
-
+using System.Diagnostics.CodeAnalysis;
+[ExcludeFromCodeCoverage]
 public sealed class ProveedorStorage
 {
 	private static readonly Dictionary<string, ProveedorStorage> _by = new(StringComparer.OrdinalIgnoreCase);

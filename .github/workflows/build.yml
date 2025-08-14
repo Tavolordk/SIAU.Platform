@@ -38,20 +38,20 @@ jobs:
       - name: Install SonarScanner for .NET
         if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
         shell: pwsh
-        run: dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+        run: |
+          New-Item -Path .\.sonar\scanner -ItemType Directory -Force | Out-Null
+          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
 
       - name: Sonar Begin
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: pwsh
         run: |
-          $sonarCoverageExclusions = "**/Program.cs,**/Startup.cs,**/GlobalUsings.cs,**/Usings.cs,**/*AssemblyInfo*.cs,**/*.g.cs,**/*.generated.cs,**/*.designer.cs,**/Migrations/**,**/Dependencies/**,**/*DependencyInjection*.cs,**/*.http"
           .\.sonar\scanner\dotnet-sonarscanner begin `
             /k:"tavolordk_SIAU.Platform" `
             /o:"tavolordk" `
             /d:sonar.host.url="https://sonarcloud.io" `
-            "/d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml" `
-            "/d:sonar.coverage.exclusions=$sonarCoverageExclusions"
+            "/d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml"
 
       - name: Restore
         run: dotnet restore SIAU.Platform.sln
@@ -59,25 +59,17 @@ jobs:
       - name: Build
         run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
 
-      # Tests + cobertura con EXCLUSIONES y UMBRALES usando archivo de respuesta (evita MSB1006/MSB1008)
-      - name: Test with coverage (and thresholds)
+      - name: Test with coverage (thresholds 80/70/80)
         shell: pwsh
         run: |
-          $rspLines = @(
-            '/p:CollectCoverage=true',
-            '/p:CoverletOutput=TestResults/coverage/',
-            '/p:CoverletOutputFormat=opencover',
-            '/p:ExcludeByFile=**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http',
-            '/p:Exclude=[xunit.*]*',
-            '/p:ThresholdForLines=80',
-            '/p:ThresholdForBranches=70',
-            '/p:ThresholdForMethods=80',
-            '/p:ThresholdStat=total'
-          )
-          $rspPath = 'msbuild.rsp'
-          $rspLines | Set-Content -Path $rspPath -Encoding ascii
-          # ¡Ojo! Escapar el @ para PowerShell:
-          dotnet test SIAU.Platform.sln --no-build -c Release `@msbuild.rsp
+          dotnet test SIAU.Platform.sln --no-build -c Release `
+            /p:CollectCoverage=true `
+            /p:CoverletOutput=TestResults/coverage/ `
+            /p:CoverletOutputFormat=opencover `
+            /p:ThresholdForLines=80 `
+            /p:ThresholdForBranches=70 `
+            /p:ThresholdForMethods=80 `
+            /p:ThresholdStat=total
 
       - name: Sonar End
         env:

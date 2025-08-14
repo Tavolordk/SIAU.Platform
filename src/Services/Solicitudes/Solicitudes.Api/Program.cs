@@ -6,7 +6,6 @@ using Solicitudes.Application.CreateSolicitud;
 using Solicitudes.Application.GetSolicitudes;
 using Solicitudes.Infrastructure;
 using Solicitudes.Infrastructure.Data;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 var builder = WebApplication.CreateBuilder(args);
 

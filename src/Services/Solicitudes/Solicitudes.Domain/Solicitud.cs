@@ -1,6 +1,8 @@
 ﻿using SharedKernel.Domain.Enums;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Solicitudes.Domain;
+[ExcludeFromCodeCoverage]
 
 public sealed class Solicitud
 {
