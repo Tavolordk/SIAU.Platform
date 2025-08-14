@@ -1,4 +1,4 @@
-﻿using SharedKernel.Abstractions;
+﻿using SharedKernel.Data;
 using SharedKernel.Domain.Enums;
 using SharedKernel.Results;
 using Solicitudes.Application.CambiarEstado;

@@ -1,5 +1,5 @@
 ﻿using System.Data;
-using SharedKernel.Abstractions;
+using SharedKernel.Data;
 using SharedKernel.Results;
 
 namespace Solicitudes.Application.CreateSolicitud;
