@@ -48,7 +48,7 @@ jobs:
         shell: pwsh
         run: |
           .\.sonar\scanner\dotnet-sonarscanner begin `
-            /k:"tavolordk_SIAU.Platform" `
+            /k:"Tavolordk_SIAU.Platform" `
             /o:"tavolordk" `
             /d:sonar.host.url="https://sonarcloud.io" `
             "/d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.xml"
