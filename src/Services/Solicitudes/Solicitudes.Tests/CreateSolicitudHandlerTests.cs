@@ -1,11 +1,10 @@
 ﻿using System.Data;
-using System.Linq;
 using Moq;
 using SharedKernel.Data;                   // IStoredProcExecutor
 using SharedKernel.Domain.Enums;          // EstadoSolicitud
 using Solicitudes.Application.CreateSolicitud;
 using TestDoubles;                        // FakeDbParameter
-using Xunit;
+namespace Solicitudes.Tests;
 
 public class CreateSolicitudHandlerTests
 {

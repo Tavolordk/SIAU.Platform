@@ -2,7 +2,7 @@
 using SharedKernel.Abstractions;
 using Solicitudes.Application.GetSolicitudes;
 using Solicitudes.Infrastructure;
-using Xunit;
+namespace Solicitudes.Tests;
 
 public class GetSolicitudesPageHandlerTests
 {

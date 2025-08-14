@@ -5,6 +5,7 @@ using SharedKernel.Domain.Enums;
 using Solicitudes.Application.CambiarEstado;
 using Solicitudes.Infrastructure;
 using TestDoubles;                     // FakeDbParameter
+namespace Solicitudes.Tests;
 
 public class CambiarEstadoHandlerTests
 {

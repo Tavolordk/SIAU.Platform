@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using System;
 using System.Data;
-using System.Diagnostics.CodeAnalysis;
 
 namespace TestDoubles;
 
@@ -10,8 +9,12 @@ public sealed class FakeDbCommand : IDbCommand
 	private readonly FakeDbParameterCollection _parameters = new();
 
 	// <- string (no null) + AllowNull en el setter; valor por defecto = ""
-	public string CommandText { get; [param: AllowNull] set; } = string.Empty;
-
+	private string _commandText = string.Empty;
+	public string CommandText
+	{
+		get => _commandText;
+		set => _commandText = value ?? throw new ArgumentNullException(nameof(CommandText));
+	}
 	public int CommandTimeout { get; set; } = 30;
 	public CommandType CommandType { get; set; } = CommandType.Text;
 

@@ -24,8 +24,8 @@ public sealed class FakeDbParameter : IDbDataParameter
 	public bool IsNullable => true;
 
 	// ==> Mantén string (no anulable) y permite null en el setter
-	public string ParameterName { get; [param: AllowNull] set; } = string.Empty;
-	public string SourceColumn { get; [param: AllowNull] set; } = string.Empty;
+	public string ParameterName { get; set; } = string.Empty;
+	public string SourceColumn { get; set; } = string.Empty;
 
 	public DataRowVersion SourceVersion { get; set; } = DataRowVersion.Current;
 	public object? Value { get; set; }
