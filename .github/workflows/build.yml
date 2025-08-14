@@ -59,21 +59,23 @@ jobs:
       - name: Build
         run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
 
-      # Test + cobertura con exclusiones y UMBRALES 80/70/80
-      # Usamos bash para que los ';' y '*' de ExcludeByFile no rompan el parsing.
+      # Tests + cobertura usando archivo de respuesta (evita errores MSB1006/MSB1008)
       - name: Test with coverage (and thresholds)
-        shell: bash
+        shell: powershell
         run: |
-          dotnet test SIAU.Platform.sln --no-build -c Release \
-            /p:CollectCoverage=true \
-            /p:CoverletOutput=TestResults/coverage/ \
-            /p:CoverletOutputFormat=opencover \
-            "/p:ExcludeByFile=**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http" \
-            "/p:Exclude=[xunit.*]*" \
-            /p:ThresholdForLines=80 \
-            /p:ThresholdForBranches=70 \
-            /p:ThresholdForMethods=80 \
-            /p:ThresholdStat=total
+          $rsp = @"
+/p:CollectCoverage=true
+/p:CoverletOutput=TestResults/coverage/
+/p:CoverletOutputFormat=opencover
+/p:ExcludeByFile=**/Program.cs;**/Startup.cs;**/GlobalUsings.cs;**/Usings.cs;**/*AssemblyInfo*.cs;**/*.g.cs;**/*.generated.cs;**/*.designer.cs;**/Migrations/**;**/Dependencies/**;**/*DependencyInjection*.cs;**/*.http
+/p:Exclude=[xunit.*]*
+/p:ThresholdForLines=80
+/p:ThresholdForBranches=70
+/p:ThresholdForMethods=80
+/p:ThresholdStat=total
+"@
+          Set-Content -Path msbuild.rsp -Value $rsp -Encoding ascii
+          dotnet test SIAU.Platform.sln --no-build -c Release @msbuild.rsp
 
       - name: Sonar End
         env:
