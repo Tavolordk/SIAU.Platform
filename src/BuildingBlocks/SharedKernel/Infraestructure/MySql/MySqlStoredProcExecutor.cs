@@ -1,70 +1,64 @@
 ﻿#nullable enable
+using MySqlConnector;
+using SharedKernel.Data;   // << asegúrate que esta es la interfaz que usas en handlers
+using System.Collections.Generic;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using MySqlConnector;
-using SharedKernel.Abstractions;
 
 namespace Solicitudes.Infrastructure.Data
 {
-	public sealed class MySqlQueryExecutor : IQueryExecutor
+	public sealed class MySqlStoredProcExecutor : IStoredProcExecutor
 	{
-		private readonly IConnectionFactory _factory;
+		private readonly string _connectionString;
 
-		public MySqlQueryExecutor(IConnectionFactory factory) => _factory = factory;
+		public MySqlStoredProcExecutor(string connectionString)
+			=> _connectionString = connectionString;
 
-		public IDbDataParameter CreateParameter(string name, object? value, DbType dbType)
+		public IDbDataParameter CreateParameter(
+			string name, object? value, DbType dbType,
+			ParameterDirection direction = ParameterDirection.Input)
 		{
-			var p = new MySqlParameter(Normalize(name), value ?? DBNull.Value);
-			p.DbType = dbType;
+			var p = new MySqlParameter(
+				name.Length > 0 && name[0] == '@' ? name : "@" + name,
+				value ?? DBNull.Value)
+			{
+				DbType = dbType,
+				Direction = direction
+			};
 			return p;
 		}
 
-		public async Task<int> ExecuteCountAsync(
-			string sql,
-			IReadOnlyDictionary<string, object?> parameters,
+		public async Task<int> ExecuteAsync(
+			string procName,
+			IEnumerable<IDbDataParameter> parameters,
 			CancellationToken ct = default)
 		{
-			await using var conn = (MySqlConnection)_factory.Create();
+			await using var conn = new MySqlConnection(_connectionString);
 			await conn.OpenAsync(ct);
 
-			await using var cmd = new MySqlCommand(sql, conn) { CommandType = CommandType.Text };
-			AddParams(cmd, parameters);
-			var obj = await cmd.ExecuteScalarAsync(ct);
-			return obj is null or DBNull ? 0 : Convert.ToInt32(obj);
+			await using var cmd = new MySqlCommand(procName, conn)
+			{ CommandType = CommandType.StoredProcedure };
+
+			foreach (var p in parameters) cmd.Parameters.Add(p);
+			return await cmd.ExecuteNonQueryAsync(ct);
 		}
 
-		public async Task<IReadOnlyList<IReadOnlyDictionary<string, object?>>> QueryAsync(
-			string sql,
-			IReadOnlyDictionary<string, object?> parameters,
+		public async Task<IDataReader> ExecuteReaderAsync(
+			string procName,
+			IEnumerable<IDbDataParameter> parameters,
 			CancellationToken ct = default)
 		{
-			await using var conn = (MySqlConnection)_factory.Create();
+			var conn = new MySqlConnection(_connectionString);
 			await conn.OpenAsync(ct);
 
-			await using var cmd = new MySqlCommand(sql, conn) { CommandType = CommandType.Text };
-			AddParams(cmd, parameters);
+			var cmd = new MySqlCommand(procName, conn)
+			{ CommandType = CommandType.StoredProcedure };
 
-			var list = new List<IReadOnlyDictionary<string, object?>>();
-			await using var r = await cmd.ExecuteReaderAsync(ct);
-			while (await r.ReadAsync(ct))
-			{
-				var row = new Dictionary<string, object?>(r.FieldCount, StringComparer.OrdinalIgnoreCase);
-				for (int i = 0; i < r.FieldCount; i++)
-					row[r.GetName(i)] = await r.IsDBNullAsync(i, ct) ? null : r.GetValue(i);
-				list.Add(row);
-			}
-			return list;
+			foreach (var p in parameters) cmd.Parameters.Add(p);
+
+			// el reader cerrará la conexión al cerrarse
+			return await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection, ct);
 		}
-
-		private static void AddParams(MySqlCommand cmd, IReadOnlyDictionary<string, object?> parameters)
-		{
-			foreach (var (k, v) in parameters)
-				cmd.Parameters.AddWithValue(Normalize(k), v ?? DBNull.Value);
-		}
-
-		private static string Normalize(string name) =>
-			string.IsNullOrEmpty(name) ? name : (name[0] == '@' ? name : "@" + name);
 	}
 }
