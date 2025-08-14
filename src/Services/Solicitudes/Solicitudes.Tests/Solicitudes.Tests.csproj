@@ -18,6 +18,11 @@
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.msbuild" Version="6.*">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Solicitudes.Application\Solicitudes.Application.csproj" />
