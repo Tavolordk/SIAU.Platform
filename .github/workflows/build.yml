@@ -20,14 +20,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Java 17 requerido por SonarScanner
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin   # o 'zulu'
+          distribution: temurin
           java-version: '17'
 
-      # .NET 9
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
@@ -64,11 +62,7 @@ jobs:
         run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
 
       - name: Test with coverage
-        run: dotnet test SIAU.Platform.sln --no-build -c Release `
-        /p:CollectCoverage=true `
-        /p:CoverletOutput=TestResults/coverage/ `
-        /p:CoverletOutputFormat=opencover
-
+        run: dotnet test SIAU.Platform.sln --no-build -c Release /p:CollectCoverage=true /p:CoverletOutput=TestResults/coverage/ /p:CoverletOutputFormat=opencover
 
       - name: Sonar End
         env:
