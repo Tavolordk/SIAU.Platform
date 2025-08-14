@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 
 namespace TestDoubles;
 
@@ -10,6 +11,7 @@ public sealed class FakeDbCommand : IDbCommand
 
 	// <- string (no null) + AllowNull en el setter; valor por defecto = ""
 	private string _commandText = string.Empty;
+	[AllowNull]
 	public string CommandText
 	{
 		get => _commandText;
