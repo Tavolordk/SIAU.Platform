@@ -1,4 +1,6 @@
-﻿using System.Data;
+﻿#nullable enable
+using System;
+using System.Data;
 
 namespace TestDoubles;
 
@@ -6,7 +8,8 @@ public sealed class FakeDbCommand : IDbCommand
 {
 	private readonly FakeDbParameterCollection _parameters = new();
 
-	public string CommandText { get; set; } = string.Empty;
+	// <- string? para alinear con IDbCommand
+	public string? CommandText { get; set; }
 	public int CommandTimeout { get; set; } = 30;
 	public CommandType CommandType { get; set; } = CommandType.Text;
 
@@ -20,7 +23,7 @@ public sealed class FakeDbCommand : IDbCommand
 	public void Dispose() { Disposed?.Invoke(this, EventArgs.Empty); }
 	public int ExecuteNonQuery() => AffectedRows;
 	public IDataReader ExecuteReader() => throw new NotSupportedException("Use ExecuteNonQuery in unit tests.");
-	public IDataReader ExecuteReader(CommandBehavior behavior) => throw new NotSupportedException();
+	public IDataReader ExecuteReader(CommandBehavior behavior) => throw new NotSupportedException("Use ExecuteNonQuery in unit tests.");
 	public object? ExecuteScalar() => ScalarResult;
 	public void Prepare() { /* no-op */ }
 

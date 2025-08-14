@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿#nullable enable
+using System;
+using System.Collections;
 using System.Data;
 
 namespace TestDoubles;
@@ -7,13 +9,13 @@ public sealed class FakeDbParameterCollection : IDataParameterCollection
 {
 	private readonly List<IDataParameter> _list = new();
 
-	public object this[int index]
+	public object? this[int index]
 	{
 		get => _list[index];
-		set => _list[index] = (IDataParameter)value;
+		set => _list[index] = AsParam(value);
 	}
 
-	public object this[string parameterName]
+	public object? this[string parameterName]
 	{
 		get
 		{
@@ -24,8 +26,8 @@ public sealed class FakeDbParameterCollection : IDataParameterCollection
 		set
 		{
 			var i = IndexOf(parameterName);
-			if (i < 0) _list.Add((IDataParameter)value);
-			else _list[i] = (IDataParameter)value;
+			if (i < 0) _list.Add(AsParam(value));
+			else _list[i] = AsParam(value);
 		}
 	}
 
@@ -35,15 +37,16 @@ public sealed class FakeDbParameterCollection : IDataParameterCollection
 	public bool IsSynchronized => false;
 	public object SyncRoot => this;
 
-	public int Add(object value)
+	public int Add(object? value)
 	{
-		_list.Add((IDataParameter)value);
+		var p = AsParam(value);
+		_list.Add(p);
 		return _list.Count - 1;
 	}
 
 	public void Clear() => _list.Clear();
 
-	public bool Contains(object value) => _list.Contains((IDataParameter)value);
+	public bool Contains(object? value) => value is IDataParameter p && _list.Contains(p);
 
 	public bool Contains(string parameterName) => IndexOf(parameterName) >= 0;
 
@@ -51,7 +54,7 @@ public sealed class FakeDbParameterCollection : IDataParameterCollection
 
 	public IEnumerator GetEnumerator() => _list.GetEnumerator();
 
-	public int IndexOf(object value) => _list.IndexOf((IDataParameter)value);
+	public int IndexOf(object? value) => value is IDataParameter p ? _list.IndexOf(p) : -1;
 
 	public int IndexOf(string parameterName)
 	{
@@ -63,9 +66,12 @@ public sealed class FakeDbParameterCollection : IDataParameterCollection
 		return -1;
 	}
 
-	public void Insert(int index, object value) => _list.Insert(index, (IDataParameter)value);
+	public void Insert(int index, object? value) => _list.Insert(index, AsParam(value));
 
-	public void Remove(object value) => _list.Remove((IDataParameter)value);
+	public void Remove(object? value)
+	{
+		if (value is IDataParameter p) _list.Remove(p);
+	}
 
 	public void RemoveAt(int index) => _list.RemoveAt(index);
 
@@ -75,10 +81,13 @@ public sealed class FakeDbParameterCollection : IDataParameterCollection
 		if (i >= 0) _list.RemoveAt(i);
 	}
 
-	// Helpers de prueba
+	private static IDataParameter AsParam(object? value) =>
+		value as IDataParameter ?? throw new ArgumentException("Value must be an IDataParameter.", nameof(value));
+
+	// Helper de prueba
 	public T? GetValue<T>(string name)
 	{
-		var p = (IDataParameter)this[name];
+		var p = (IDataParameter)this[name]!;
 		return p.Value is null ? default : (T)Convert.ChangeType(p.Value, typeof(T))!;
 	}
 }
