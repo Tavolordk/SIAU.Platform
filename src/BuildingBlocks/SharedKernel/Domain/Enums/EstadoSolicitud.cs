@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 public sealed class EstadoSolicitud
 {
 	private static readonly Dictionary<string, EstadoSolicitud> _by = new(StringComparer.OrdinalIgnoreCase);
+	public static readonly EstadoSolicitud Captura = new("CAPTURA");
 	public static readonly EstadoSolicitud Creada = new("CREADA");
 	public static readonly EstadoSolicitud EnRevision = new("EN_REVISION");
 	public static readonly EstadoSolicitud Aprobada = new("APROBADA");

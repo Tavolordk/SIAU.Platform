@@ -34,7 +34,7 @@ public sealed class SolicitudesController(
 		return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
 	}
 
-	[HttpGet("{id:uint}")]
+	[HttpGet("{id:int:min(0)}")] 
 	public ActionResult GetById([FromRoute] uint id) => Ok(new { id }); // placeholder
 
 	public sealed record CambiarEstadoDto(uint SolicitudId, string EstadoClave, uint UsuarioId, string Comentario);
