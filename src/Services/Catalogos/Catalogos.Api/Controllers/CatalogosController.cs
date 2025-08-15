@@ -5,16 +5,18 @@ namespace Catalogos.Api.Controllers;
 
 [ApiController]
 [Route("catalogos")]
-public sealed class CatalogosController(CatalogosRepository repo) : ControllerBase
+public sealed class CatalogosController(ICatalogosRepository repo) : ControllerBase
 {
 	[HttpGet("sexos")] public Task<IEnumerable<object>> Sexos(CancellationToken ct) => repo.Sexos(ct);
 	[HttpGet("estados-civil")] public Task<IEnumerable<object>> EstadosCivil(CancellationToken ct) => repo.EstadosCivil(ct);
 	[HttpGet("paises")] public Task<IEnumerable<object>> Paises(CancellationToken ct) => repo.Paises(ct);
+
 	[HttpGet("nacionalidades")]
 	public Task<IEnumerable<object>> Nacionalidades([FromQuery] ushort? paisId, CancellationToken ct)
 		=> repo.Nacionalidades(paisId, ct);
 
 	[HttpGet("estados")] public Task<IEnumerable<object>> Estados(CancellationToken ct) => repo.Estados(ct);
+
 	[HttpGet("estados/{estadoId}/municipios")]
 	public Task<IEnumerable<object>> Municipios([FromRoute] uint estadoId, CancellationToken ct)
 		=> repo.Municipios(estadoId, ct);
@@ -30,6 +32,7 @@ public sealed class CatalogosController(CatalogosRepository repo) : ControllerBa
 	[HttpGet("tipos-documentos")] public Task<IEnumerable<object>> TiposDocumentos(CancellationToken ct) => repo.TiposDocumentos(ct);
 
 	[HttpGet("sistemas")] public Task<IEnumerable<object>> Sistemas(CancellationToken ct) => repo.Sistemas(ct);
+
 	[HttpGet("sistemas/{sistemaId}/perfiles")]
 	public Task<IEnumerable<object>> PerfilesPorSistema([FromRoute] int sistemaId, CancellationToken ct)
 		=> repo.PerfilesPorSistema(sistemaId, ct);

@@ -5,7 +5,7 @@ using SharedKernel.Abstractions;
 
 namespace Catalogos.Api.Data;
 
-public sealed class CatalogosRepository(IConnectionFactory factory)
+public sealed class CatalogosRepository(IConnectionFactory factory) : ICatalogosRepository
 {
 	private async Task<T> WithConn<T>(Func<IDbConnection, Task<T>> work, CancellationToken ct)
 	{
