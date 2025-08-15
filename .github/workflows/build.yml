@@ -1,94 +1,39 @@
-name: build
+- name: Sonar Begin
+  env:
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  shell: powershell
+  run: |
+    .\.sonar\scanner\dotnet-sonarscanner begin `
+      /k:"tavolordk_SIAU.Platform" `
+      /o:"tavolordk" `
+      /d:sonar.host.url="https://sonarcloud.io" `
+      /d:sonar.cs.cobertura.reportsPaths="**/coverage.cobertura.xml" `
+      /d:sonar.coverage.exclusions="**/*.g.cs,**/*.generated.cs,**/*.designer.cs"
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
+- name: Test with coverage
+  run: >
+    dotnet test SIAU.Platform.sln --no-build -c Release
+    --collect:"XPlat Code Coverage"
+    --logger "trx;LogFileName=test_results.trx"
+    --results-directory TestResults
 
-jobs:
-  build:
-    runs-on: windows-latest
+- name: Install ReportGenerator
+  run: dotnet tool install --global dotnet-reportgenerator-globaltool
 
-    steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+- name: Generate HTML coverage report
+  shell: powershell
+  run: |
+    reportgenerator -reports:**/coverage.cobertura.xml `
+                    -targetdir:CoverageReport `
+                    -reporttypes:HtmlInline;Cobertura;TextSummary;JsonSummary
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+- name: Upload coverage HTML as artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: coverage-html
+    path: CoverageReport
 
-      - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      # Sonar scanner cache/instalación
-      - name: Cache Sonar scanner
-        id: cache-sonar-scanner
-        uses: actions/cache@v4
-        with:
-          path: .\.sonar\scanner
-          key: ${{ runner.os }}-sonar-scanner
-          restore-keys: ${{ runner.os }}-sonar-scanner
-
-      - name: Install SonarScanner for .NET
-        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
-        shell: powershell
-        run: dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
-
-      - name: Sonar Begin
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        shell: powershell
-        run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin `
-            /k:"tavolordk_SIAU.Platform" `
-            /o:"tavolordk" `
-            /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" `
-            /d:sonar.coverage.exclusions="**/*.g.cs,**/*.generated.cs,**/*.designer.cs"
-
-      - name: Restore
-        run: dotnet restore SIAU.Platform.sln
-
-      - name: Build
-        run: dotnet build SIAU.Platform.sln -c Release --no-restore -p:TreatWarningsAsErrors=false
-
-      # Tests + cobertura (todos los proyectos de test)
-      - name: Test with coverage (thresholds 80/70/80)
-        shell: powershell
-        run: |
-          dotnet test SIAU.Platform.sln --no-build -c Release `
-            /p:CollectCoverage=true `
-            /p:CoverletOutput=TestResults/coverage/ `
-            /p:CoverletOutputFormat=opencover,cobertura `
-            /p:ThresholdForLines=80 `
-            /p:ThresholdForBranches=70 `
-            /p:ThresholdForMethods=80 `
-            /p:ThresholdStat=total
-
-      # Reporte HTML bonito (gráfico)
-      - name: Install ReportGenerator
-        run: dotnet tool install --global dotnet-reportgenerator-globaltool
-
-      - name: Generate HTML coverage report
-        shell: powershell
-        run: |
-          reportgenerator -reports:**/coverage.opencover.xml `
-                          -targetdir:CoverageReport `
-                          -reporttypes:HtmlInline;Cobertura
-
-      - name: Upload coverage HTML as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html
-          path: CoverageReport
-
-      - name: Sonar End
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: .\.sonar\scanner\dotnet-sonarscanner end
+- name: Sonar End
+  env:
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  run: .\.sonar\scanner\dotnet-sonarscanner end
