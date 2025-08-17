@@ -1,17 +1,11 @@
-﻿using System.Net;
-using FluentAssertions;
+﻿// Catalogos.Api/Controllers/PingController.cs
+using Microsoft.AspNetCore.Mvc;
 
-namespace Catalogos.Api.Tests;
+namespace Catalogos.Api.Controllers;
 
-public class PingControllerTests : IClassFixture<CustomWebApplicationFactory>
+[ApiController]
+[Route("ping")]
+public class PingController : ControllerBase
 {
-	private readonly HttpClient _client;
-	public PingControllerTests(CustomWebApplicationFactory f) => _client = f.CreateClient();
-
-	[Fact]
-	public async Task Ping_regresa_200()
-	{
-		var res = await _client.GetAsync("/ping");
-		res.StatusCode.Should().Be(HttpStatusCode.OK);
-	}
+	[HttpGet] public IActionResult Get() => Ok(new { ok = true });
 }

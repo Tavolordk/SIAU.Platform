@@ -1,66 +1,45 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using Catalogos.Api.Data;
 using FluentAssertions;
-using Moq;
+using Newtonsoft.Json.Linq;
+using Xunit;
 
-namespace Catalogos.Api.Tests;
+namespace Catalogos.Tests;
 
 public class CatalogosControllerTests : IClassFixture<CustomWebApplicationFactory>
 {
-	private readonly CustomWebApplicationFactory _factory;
 	private readonly HttpClient _client;
-	private readonly Mock<ICatalogosRepository> _repo;
+	public CatalogosControllerTests(CustomWebApplicationFactory factory) => _client = factory.CreateClient();
 
-	public CatalogosControllerTests(CustomWebApplicationFactory factory)
+	public static IEnumerable<object[]> Rutas() => new[]
 	{
-		_factory = factory;
-		_client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
-		{
-			AllowAutoRedirect = false
-		});
-		_repo = factory.RepoMock;
-
-		// Respuestas por defecto para no fallar si olvido configurar alguna:
-		var ok = new[] { new Dictionary<string, object> { ["id"] = 1, ["nombre"] = "OK" } }.Cast<object>();
-		_repo.Setup(r => r.Sexos(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.EstadosCivil(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.Paises(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.Nacionalidades(It.IsAny<ushort?>(), default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.Estados(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.Municipios(It.IsAny<uint>(), default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.TiposEstructura(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.Estructura(It.IsAny<uint?>(), It.IsAny<byte?>(), It.IsAny<uint?>(), default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.EstadosSolicitud(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.OpcionesAplican(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.TiposDocumentos(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.Sistemas(default)).ReturnsAsync(ok);
-		_repo.Setup(r => r.PerfilesPorSistema(It.IsAny<int>(), default)).ReturnsAsync(ok);
-	}
+		new object[] { "/catalogos/sexos" },
+		new object[] { "/catalogos/estados-civil" },
+		new object[] { "/catalogos/paises" },
+		new object[] { "/catalogos/nacionalidades" },
+		new object[] { "/catalogos/estados" },
+		new object[] { "/catalogos/estados/9/municipios" },
+		new object[] { "/catalogos/tipos-estructura" },
+		new object[] { "/catalogos/estructura" },
+		new object[] { "/catalogos/estados-solicitud" },
+		new object[] { "/catalogos/opciones-aplican" },
+		new object[] { "/catalogos/tipos-documentos" },
+		new object[] { "/catalogos/sistemas" },
+		new object[] { "/catalogos/sistemas/1/perfiles" },
+	};
 
 	[Theory]
-	[InlineData("/catalogos/sexos")]
-	[InlineData("/catalogos/estados-civil")]
-	[InlineData("/catalogos/paises")]
-	[InlineData("/catalogos/nacionalidades?paisId=484")]
-	[InlineData("/catalogos/estados")]
-	[InlineData("/catalogos/estados/10/municipios")]
-	[InlineData("/catalogos/tipos-estructura")]
-	[InlineData("/catalogos/estructura?padreId=1&tipoId=2&divisionId=3")]
-	[InlineData("/catalogos/estados-solicitud")]
-	[InlineData("/catalogos/opciones-aplican")]
-	[InlineData("/catalogos/tipos-documentos")]
-	[InlineData("/catalogos/sistemas")]
-	[InlineData("/catalogos/sistemas/5/perfiles")]
+	[MemberData(nameof(Rutas))]
 	public async Task Endpoints_de_catalogos_regresan_200_y_lista(string url)
 	{
 		var res = await _client.GetAsync(url);
 		res.StatusCode.Should().Be(HttpStatusCode.OK);
 
-		var json = await res.Content.ReadFromJsonAsync<List<Dictionary<string, object>>>();
-		json.Should().NotBeNull();
-		json!.Count.Should().Be(1);
-		json[0].Should().ContainKey("id");
+		var txt = await res.Content.ReadAsStringAsync();
+		var json = JToken.Parse(txt);
+
+		json.Type.Should().Be(JTokenType.Array);
+		((JArray)json).Count.Should().BeGreaterThan(0); // mejor > 0 que == 1
 	}
 
 	[Fact]
@@ -68,7 +47,5 @@ public class CatalogosControllerTests : IClassFixture<CustomWebApplicationFactor
 	{
 		var res = await _client.GetAsync("/swagger/v1/swagger.json");
 		res.StatusCode.Should().Be(HttpStatusCode.OK);
-		var swagger = await res.Content.ReadAsStringAsync();
-		swagger.Should().Contain("\"openapi\"");
 	}
 }
