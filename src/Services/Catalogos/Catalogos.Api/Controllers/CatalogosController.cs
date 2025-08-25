@@ -1,23 +1,76 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Catalogos.Api.Data;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Text.Json.Serialization;
+using Dapper;
+using System.Data;
+using MySqlConnector; // o el provider que uses
 
 namespace Catalogos.Api.Controllers;
 
 [ApiController]
+[Authorize]                  // igual que el resto, si tu API pide JWT
 [Route("catalogos")]
-public sealed class CatalogosController(ICatalogosRepository repo) : ControllerBase
+public sealed class CatalogosController : ControllerBase
 {
-	[HttpGet("sexos")] public Task<IEnumerable<object>> Sexos(CancellationToken ct) => repo.Sexos(ct);
-	[HttpGet("estados-civil")] public Task<IEnumerable<object>> EstadosCivil(CancellationToken ct) => repo.EstadosCivil(ct);
-	[HttpGet("paises")] public Task<IEnumerable<object>> Paises(CancellationToken ct) => repo.Paises(ct);
-	[HttpGet("nacionalidades")] public Task<IEnumerable<object>> Nacionalidades([FromQuery] ushort? paisId, CancellationToken ct) => repo.Nacionalidades(paisId, ct);
-	[HttpGet("estados")] public Task<IEnumerable<object>> Estados(CancellationToken ct) => repo.Estados(ct);
-	[HttpGet("estados/{estadoId}/municipios")] public Task<IEnumerable<object>> Municipios(uint estadoId, CancellationToken ct) => repo.Municipios(estadoId, ct);
-	[HttpGet("tipos-estructura")] public Task<IEnumerable<object>> TiposEstructura(CancellationToken ct) => repo.TiposEstructura(ct);
-	[HttpGet("estructura")] public Task<IEnumerable<object>> Estructura([FromQuery] uint? padreId, [FromQuery] byte? tipoId, [FromQuery] uint? divisionId, CancellationToken ct) => repo.Estructura(padreId, tipoId, divisionId, ct);
-	[HttpGet("estados-solicitud")] public Task<IEnumerable<object>> EstadosSolicitud(CancellationToken ct) => repo.EstadosSolicitud(ct);
-	[HttpGet("opciones-aplican")] public Task<IEnumerable<object>> OpcionesAplican(CancellationToken ct) => repo.OpcionesAplican(ct);
-	[HttpGet("tipos-documentos")] public Task<IEnumerable<object>> TiposDocumentos(CancellationToken ct) => repo.TiposDocumentos(ct);
-	[HttpGet("sistemas")] public Task<IEnumerable<object>> Sistemas(CancellationToken ct) => repo.Sistemas(ct);
-	[HttpGet("sistemas/{sistemaId}/perfiles")] public Task<IEnumerable<object>> PerfilesPorSistema(int sistemaId, CancellationToken ct) => repo.PerfilesPorSistema(sistemaId, ct);
+	private readonly IDbConnection _db;
+
+	public CatalogosController(IDbConnection db)   // <- inyectada desde Program.cs
+	{
+		_db = db;
+	}
+	// ===== DTOs con nombres en MAYÚSCULAS (no rompemos camelCase global) =====
+	public sealed class TipoUsuarioDto { public int ID { get; set; } public string TP_USUARIO { get; set; } = ""; }
+	public sealed class CatEntiDto { public int ID { get; set; } public string NOMBRE { get; set; } = ""; public string TIPO { get; set; } = ""; public int? FK_PADRE { get; set; } }
+	public sealed class CatEstructuraDto { public int ID { get; set; } public string NOMBRE { get; set; } = ""; public string TIPO { get; set; } = ""; public int? FK_PADRE { get; set; } }
+	public sealed class CatPerfilDto { public int ID { get; set; } public string CLAVE { get; set; } = ""; public string FUNCION { get; set; } = ""; }
+
+	public sealed class CatalogosResponseDto
+	{
+		[JsonPropertyName("TipoUsuario")] public List<TipoUsuarioDto> TipoUsuario { get; set; } = [];
+		[JsonPropertyName("Entidades")] public List<CatEntiDto> Entidades { get; set; } = [];
+		[JsonPropertyName("Estructura")] public List<CatEstructuraDto> Estructura { get; set; } = [];
+		[JsonPropertyName("Perfiles")] public List<CatPerfilDto> Perfiles { get; set; } = [];
+	}
+
+	[HttpGet("tpusuario")]
+	public async Task<ActionResult<CatalogosResponseDto>> GetTpUsuario(CancellationToken ct)
+	{
+		const string sqlTipos = @"
+    SELECT id AS ID, descripcion AS TP_USUARIO
+    FROM cat_tp_usuarios
+    ORDER BY id;";
+
+		const string sqlEntidades = @"
+    SELECT e.id AS ID, e.nombre AS NOMBRE, 'ESTADO' AS TIPO, NULL AS FK_PADRE
+    FROM cat_division_geopolitica e
+    WHERE e.nivel = 'estado'
+    UNION ALL
+    SELECT m.id AS ID, m.nombre AS NOMBRE, 'MUNICIPIO' AS TIPO, m.fk_padre AS FK_PADRE
+    FROM cat_division_geopolitica m
+    WHERE m.nivel = 'municipio'
+    ORDER BY TIPO, NOMBRE;";
+
+		const string sqlEstructura = @"
+    SELECT id AS ID, nombre AS NOMBRE, tipo_ID AS TIPO, fk_padre AS FK_PADRE
+    FROM cat_estructura_organizacional
+    ORDER BY TIPO_ID, NOMBRE;";
+
+		const string sqlPerfiles = @"
+    SELECT id AS ID, clave AS CLAVE, descripcion AS FUNCION
+    FROM cat_perfiles
+    WHERE activo = 1
+    ORDER BY id;";
+
+
+
+		var r = new CatalogosResponseDto
+		{
+			TipoUsuario = (await _db.QueryAsync<TipoUsuarioDto>(new CommandDefinition(sqlTipos, cancellationToken: ct))).ToList(),
+			Entidades = (await _db.QueryAsync<CatEntiDto>(new CommandDefinition(sqlEntidades, cancellationToken: ct))).ToList(),
+			Estructura = (await _db.QueryAsync<CatEstructuraDto>(new CommandDefinition(sqlEstructura, cancellationToken: ct))).ToList(),
+			Perfiles = (await _db.QueryAsync<CatPerfilDto>(new CommandDefinition(sqlPerfiles, cancellationToken: ct))).ToList()
+		};
+
+		return Ok(r);
+	}
 }
